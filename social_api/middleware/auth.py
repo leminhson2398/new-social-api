@@ -1,0 +1,3 @@
+
+class AuthBackend(object):
+    pass
