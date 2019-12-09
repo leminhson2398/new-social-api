@@ -7,7 +7,7 @@ from .graphql import CustomGraphqlApp
 import typing
 from graphene import Schema
 from .models.schema import Query, Mutation
-from .import database
+from .models import database
 
 
 allowed_origins: typing.List[str] = [

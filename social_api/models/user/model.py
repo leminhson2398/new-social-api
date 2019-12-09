@@ -16,6 +16,7 @@ class User(Base):
     gender = Column(String(10), nullable=True)
     date_of_birth = Column(DateTime(), nullable=True)
     email = Column(String(256), nullable=False, unique=True, index=True)
+    phone_number = Column(String(15), nullable=False, unique=True)
     hashed_password = Column(String(200), nullable=False)
     # UserPicture please refer to file.mode.UserPicture
     picture = image_attachment('UserPicture')
