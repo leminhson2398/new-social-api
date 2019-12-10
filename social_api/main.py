@@ -3,10 +3,9 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from graphql.execution.executors.asyncio import AsyncioExecutor
 from starlette.routing import Route
-from .graphql import CustomGraphqlApp
 import typing
 from graphene import Schema
-from .models.schema import Query, Mutation
+from .graphql import CustomGraphqlApp, Query, Mutation
 from .models import database
 
 

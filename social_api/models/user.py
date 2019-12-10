@@ -1,7 +1,7 @@
 from sqlalchemy import (
     Column, String, Integer, DateTime, Boolean
 )
-from ..import Base
+from .base import Base
 from datetime import datetime
 from sqlalchemy_imageattach.entity import image_attachment
 
