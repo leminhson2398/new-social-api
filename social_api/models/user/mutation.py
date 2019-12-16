@@ -196,7 +196,7 @@ class Signin(ObjectMutation):
                     # this user does exist:
                     # then create token:
                     try:
-                        token: str = jwt.encode(
+                        token = jwt.encode(
                             {
                                 'username': userWithEmail['username'],
                                 'id': userWithEmail['id'],

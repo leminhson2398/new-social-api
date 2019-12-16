@@ -38,18 +38,18 @@ class UserType(ObjectType):
     """
         Graphql type for User model
     """
-    id = Int(required=True)
+    id = Int(required=False)
     first_name = GString(required=False)
     last_name = GString(required=False)
-    username = GString(required=True)
-    gender = GString(required=True)
+    username = GString(required=False)
+    gender = GString(required=False)
     date_of_birth = Date(required=False)
-    email = GString(required=True)
+    email = GString(required=False)
     phone_number = GString(required=False)
     picture = GString(required=False)
-    active = GBoolean(required=True)
-    created_at = GDateTime(required=True)
-    updated_at = GDateTime(required=True)
+    active = GBoolean(required=False)
+    created_at = GDateTime(required=False)
+    updated_at = GDateTime(required=False)
 
 
 UserTable: Table = User.__table__

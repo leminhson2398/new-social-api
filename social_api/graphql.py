@@ -47,6 +47,19 @@ class CustomGraphqlApp(GraphQLApp):
                 data = request.query_params
             elif "multipart/form-data" in content_type:
                 form = await request.form()
+                # form gonna looks like this:
+                """
+					{
+						'operations': '{
+							"operationName":"UploadFile",
+							"variables":{"file":null},
+							"query":"mutation UploadFile($file: Upload!) {\\n  uploadFile(file: $file) {\\n    ok\\n   errors\\n    __typename\\n  }\\n}\\n"
+						}',
+						'map': '{"1":["variables.file"]}',
+						'1': <starlette.datastructures.UploadFile object at 0x0000025395E7C1C8>,
+						...
+					}
+				"""
                 form: dict = dict(form)
                 data: dict = json.loads(form.pop('operations', None))
                 map_: dict = json.loads(form.pop('map', None))
@@ -62,19 +75,6 @@ class CustomGraphqlApp(GraphQLApp):
                             data.update({
                                 'variables': variables
                             })
-                # form gonna looks like this:
-                """
-					{
-						'operations': '{
-							"operationName":"UploadFile",
-							"variables":{"file":null},
-							"query":"mutation UploadFile($file: Upload!) {\\n  uploadFile(file: $file) {\\n    ok\\n   errors\\n    __typename\\n  }\\n}\\n"
-						}',
-						'map': '{"1":["variables.file"]}',
-						'1': <starlette.datastructures.UploadFile object at 0x0000025395E7C1C8>,
-						...
-					}
-					"""
             else:
                 return PlainTextResponse(
                     "Unsupported Media Type",

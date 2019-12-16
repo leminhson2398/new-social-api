@@ -1,10 +1,12 @@
 from .user.schema import UserQuery, UserMutation
 from .sample.schema import SampleMutation, SampleQuery
+from .file.schema import FileMutation
 
 
 class Mutation(
     UserMutation,
-    SampleMutation
+    SampleMutation,
+    FileMutation
 ):
     pass
 

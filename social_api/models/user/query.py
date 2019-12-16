@@ -1,21 +1,45 @@
-from graphene import ObjectType, Field, String
+from graphene import ObjectType, Field, String, List, NonNull
 from .model import User, UserType
 from ..base import database
-from typing import Union
-from sqlalchemy import select
+import typing
 from .utils import fetch_user_with_field
+from ..base import STD_NUMBER_OF_RESULT_AT_A_TIME
+from graphql.execution.base import ResolveInfo
+
+
+def func():
+    import time
+
+    time.sleep(5)
+    print('done sleep')
 
 
 class Query(ObjectType):
-    user = Field(
+    user_by_email: Field = Field(
         UserType,
-        required=True,
-        email=String(required=True)
+        required=False,
+        email=String(required=True),
     )
 
-    async def resolve_user(self, info, **kwargs):
-        email: Union[str, None] = kwargs.get('email', None)
+    users: NonNull = NonNull(
+        List(UserType, required=False)
+    )
 
-        result = await fetch_user_with_field(email)
+    async def resolve_user_by_email(self, info: ResolveInfo, **kwargs) -> typing.Union[None, UserType]:
+        userData: typing.Union[None, UserType] = None
+        result: typing.Union[typing.Mapping, None] = None
 
-        print(result)
+        email: str = kwargs.get('email', '').strip()
+        if bool(email):
+            result = await fetch_user_with_field(email=email)
+
+        if not result is None:
+            userData = dict(result)
+            userData.pop('hashed_password')
+
+        background = info.context['background']
+        background.add_task(func)
+        return userData
+
+    async def resolve_users(self, info, **kwargs) -> typing.Union[List, typing.List[UserType]]:
+        pass

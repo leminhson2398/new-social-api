@@ -2,40 +2,34 @@ from starlette.authentication import (
     AuthCredentials,
     AuthenticationBackend,
     AuthenticationError,
+    SimpleUser,
     BaseUser
 )
 import jwt
 from ..models.base import config
-from ..models.user.model import User
+from ..models.user.model import UserTable
 import logging
-from starlette.requests import HTTPConnection
+from starlette.requests import Request
 import typing
 from starlette.datastructures import Headers
 from ..models.base import database
-# from sqlalchemy.engine.result import ResultProxy
 from sqlalchemy import select, and_
 
 
-class CustomAuthenticatedUser(object):
+class CustomAuthenticatedUser(SimpleUser):
     def __init__(self, id: int, username: str) -> None:
-        self.id: str = id
-        self.username: str = username
-
-    @property
-    def is_authenticated(self) -> bool:
-        return True
+        self.id: typing.Union[int, str] = id
+        super(CustomAuthenticatedUser, self).__init__(username=username)
 
 
 class AuthBackend(AuthenticationBackend):
-    async def authenticate(self, conn: HTTPConnection) -> typing.Union[
-        typing.List(AuthCredentials, CustomAuthenticatedUser), None
-    ]:
+    async def authenticate(self, conn: Request) -> typing.Tuple[AuthCredentials, BaseUser]:
         auth: str = conn.headers.get('Authentication', default='')
         if bool(auth):
             # auth in form of: 'JWT kjdfkldjfoirtjig'.
-            scheme, credentials = auth.split(' ', maxsplit=1)
+            scheme, credentials = auth.split(sep=' ', maxsplit=1)
             if scheme.lower() != 'jwt':
-                return None
+                return
             try:
                 decoded: typing.Mapping[str, typing.Any] = jwt.decode(
                     credentials, config.get('SECRET', default=''),
@@ -43,18 +37,20 @@ class AuthBackend(AuthenticationBackend):
                 )
             except jwt.PyJWTError as e:
                 logging.error(f"Error decoding authorization: {e}.")
-                return None
+                return
+            # decoded looks like this:
             """
-            decoded has form of: {'username': value, 'id': value, 'expire': value}
+            {'username': value, 'id': value, 'expire': value}
             """
-            if not all([bool(decoded.get(key, None)) for key in ['username', 'id', 'expire']]):
+            username, id, expire = [decoded.get(key, None) for key in [
+                'username', 'id', 'expire']]
+            if not all(bool(i) for i in [id, username, expire]):
                 raise AuthenticationError('Invalid token')
             else:
-                userTable = User.__table__
-                query: typing.Any = select([userTable]).where(
+                query: typing.Any = select([UserTable]).where(
                     and_(
-                        userTable.c.username == decoded['username'],
-                        userTable.c.id == decoded['id'],
+                        UserTable.c.username == username,
+                        UserTable.c.id == id,
                     )
                 )
                 user: typing.Mapping = await database.fetch_one(query=query)
@@ -63,11 +59,11 @@ class AuthBackend(AuthenticationBackend):
                     return (
                         AuthCredentials(['authenticated']),
                         CustomAuthenticatedUser(
-                            id=decoded['id'],
-                            username=decoded['username']
+                            id=id,
+                            username=username
                         ),
                     )
                 else:
-                    return None
+                    return
         else:
-            return None
+            return

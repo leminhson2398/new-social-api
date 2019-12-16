@@ -25,7 +25,7 @@ async def fetch_user_with_field(email: str = None, phone: str = None, username: 
     query: typing.Union[Select, None] = None
     if bool(email) and isinstance(email, str):
         query = select([UserTable]).where(
-            UserTable.c.email == email
+            UserTable.c['email'] == email
         )
     elif bool(phone) and isinstance(phone, str):
         query = select([UserTable]).where(
