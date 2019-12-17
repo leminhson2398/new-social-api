@@ -1,4 +1,4 @@
-from ..base import Base
+from social_api.db.base import Base
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy_imageattach.entity import Image

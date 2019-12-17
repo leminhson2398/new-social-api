@@ -11,7 +11,7 @@ from graphene import (
 )
 from datetime import datetime
 from sqlalchemy_imageattach.entity import image_attachment
-from ..base import Base
+from social_api.db.base import Base
 
 
 class User(Base):

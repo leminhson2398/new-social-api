@@ -1,17 +1,8 @@
-from graphene import ObjectType, Field, String, List, NonNull
-from .model import User, UserType
-from ..base import database
+from graphene import ObjectType, Field, String, List, NonNull, Int
+from .model import UserType, UserTable
 import typing
-from .utils import fetch_user_with_field
-from ..base import STD_NUMBER_OF_RESULT_AT_A_TIME
+from social_api.db.common import fetch_one_record_filter_by_one_field, fetch_multiple_records
 from graphql.execution.base import ResolveInfo
-
-
-def func():
-    import time
-
-    time.sleep(5)
-    print('done sleep')
 
 
 class Query(ObjectType):
@@ -22,7 +13,8 @@ class Query(ObjectType):
     )
 
     users: NonNull = NonNull(
-        List(UserType, required=False)
+        List(UserType, required=False),
+        offset=Int(required=False)
     )
 
     async def resolve_user_by_email(self, info: ResolveInfo, **kwargs) -> typing.Union[None, UserType]:
@@ -31,15 +23,30 @@ class Query(ObjectType):
 
         email: str = kwargs.get('email', '').strip()
         if bool(email):
-            result = await fetch_user_with_field(email=email)
+            # fetch one user based on the provided email:
+            result = await fetch_one_record_filter_by_one_field(
+                table=UserTable, filterField='email', filterValue=email
+            )
 
         if not result is None:
             userData = dict(result)
+            # remove password before sending to next process
             userData.pop('hashed_password')
 
-        background = info.context['background']
-        background.add_task(func)
         return userData
 
-    async def resolve_users(self, info, **kwargs) -> typing.Union[List, typing.List[UserType]]:
-        pass
+    async def resolve_users(self, info: ResolveInfo, **kwargs) -> typing.Union[List, typing.List[UserType]]:
+        users: list = []
+        offset: int = kwargs.get('offset', 0)
+
+        fetchResult: typing.Union[None, typing.List[typing.Mapping]] = await fetch_multiple_records(
+            table=UserTable, offset=offset)
+
+        if not fetchResult is None:
+            for result in fetchResult:
+                userData: typing.Mapping[str, typing.Any] = dict(result)
+                # remove 'hashed_password' field first:
+                userData.pop('hashed_password')
+                users.append(userData)
+
+        return users

@@ -1,43 +1,17 @@
-from ..base import database
+from social_api.db.base import database
 from .model import UserTable
 from sqlalchemy import select, or_
-from sqlalchemy.sql.schema import Table
 from sqlalchemy.sql.selectable import Select
 import typing
 from validate_email import validate_email
 import re
+
 
 MALE: str = 'male'
 FEMALE: str = 'female'
 OTHER: str = 'other'
 USE_EMAIL: str = 'email'
 USE_PHONE_NUMBER: str = 'phone_number'
-
-
-async def fetch_user_with_field(email: str = None, phone: str = None, username: str = None) -> typing.Union[None, typing.Mapping]:
-    """
-    email: string type\n
-    phone: string type\n
-    username: string type\n
-    NOTE: only pass in one (1) argument per call to me\n
-    either email || phone || username
-    """
-    query: typing.Union[Select, None] = None
-    if bool(email) and isinstance(email, str):
-        query = select([UserTable]).where(
-            UserTable.c['email'] == email
-        )
-    elif bool(phone) and isinstance(phone, str):
-        query = select([UserTable]).where(
-            UserTable.c.phone_number == phone
-        )
-    elif bool(username) and isinstance(username, str):
-        query = select([UserTable]).where(
-            UserTable.c.username == username
-        )
-    else:
-        return None
-    return await database.fetch_one(query)
 
 
 def validate_password(password: str) -> typing.List[str]:

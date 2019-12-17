@@ -10,7 +10,6 @@ from graphene import (
 from starlette.background import BackgroundTasks
 import typing
 from .utils import (
-    fetch_user_with_field,
     validate_email,
     validate_password,
     OTHER, MALE, FEMALE,
@@ -23,11 +22,13 @@ from sqlalchemy.engine.result import ResultProxy
 from .security import check_password, encrypt_password
 import jwt
 from datetime import datetime, timedelta
-from ..base import config
+from social_api import config
 import logging
 from phonenumbers import parse, is_valid_number
 from phonenumbers.phonenumber import PhoneNumber
 from collections import defaultdict
+from social_api.db.common import fetch_one_record_filter_by_one_field
+from .model import UserTable
 
 
 class SignupError(ObjectType):
@@ -89,13 +90,13 @@ class Signup(ObjectMutation):
             if emailOrPhone in [USE_EMAIL, USE_PHONE_NUMBER]:
                 existingUserWithEmailOrPhone: typing.Union[typing.Mapping, None] = None
                 if emailOrPhone == USE_EMAIL:
-                    # if user use email for registration:
-                    existingUserWithEmailOrPhone = await fetch_user_with_field(
-                        email=email_or_phone)
+                    # if user use email for registration, fetch user with this email from the database:
+                    existingUserWithEmailOrPhone = await fetch_one_record_filter_by_one_field(
+                        table=UserTable, filterField='email', filterValue=email_or_phone)
                 elif emailOrPhone == USE_PHONE_NUMBER:
                     # if user use phone number for registration
-                    existingUserWithEmailOrPhone = await fetch_user_with_field(
-                        phone=email_or_phone)
+                    existingUserWithEmailOrPhone = await fetch_one_record_filter_by_one_field(
+                        table=UserTable, filterField='phone_number', filterValue=email_or_phone)
 
                 # the user with email || phone number does exist
                 if not existingUserWithEmailOrPhone is None:
@@ -104,8 +105,8 @@ class Signup(ObjectMutation):
                 else:
                     # email or phone is not taken:
                     # now we must check 'username'
-                    existingUserWithUsername: typing.Union[typing.Mapping, None] = await fetch_user_with_field(
-                        username=username)
+                    existingUserWithUsername: typing.Union[typing.Mapping, None] = await fetch_one_record_filter_by_one_field(
+                        table=UserTable, filterField='username', filterValue=username)
                     if not existingUserWithUsername is None:
                         # user with this 'username' is already exist.
                         errors['username'].append(
@@ -185,7 +186,9 @@ class Signin(ObjectMutation):
 
         if bool(email and password):
             # check user with this email does exist or not:
-            userWithEmail: typing.Union[None, ResultProxy] = await fetch_user_with_field(email=email)
+            userWithEmail: typing.Union[None, ResultProxy] = await fetch_one_record_filter_by_one_field(
+                table=UserTable, filterField='email', filterValue=email
+            )
             if userWithEmail is None:
                 errors.append(
                     'We found no account with this email registered.')
@@ -202,7 +205,8 @@ class Signin(ObjectMutation):
                                 'id': userWithEmail['id'],
                                 'expire': (datetime.utcnow() + timedelta(minutes=10)).timestamp()
                             },
-                            config.get('SECRET', default=''),
+                            config.get(
+                                'SECRET', cast=str, default='@JHSD*(U$JRNDUU#$NKEFE*R()#%NJHFSR*_(#IOFDKEFJ)(#%*$()))'),
                             algorithm='HS256'
                         ).decode('utf-8')
                     except jwt.PyJWTError as e:

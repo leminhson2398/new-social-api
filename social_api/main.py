@@ -9,19 +9,18 @@ from .graphql import CustomGraphqlApp
 import typing
 from graphene import Schema
 from .models.schema import Query, Mutation
-from .models.base import database
+from social_api.db.base import database
 from .middleware.auth import AuthBackend
 
 
 # add allowed origins
 allowed_origins: typing.List[str] = [
-    # 'http://localhost:3000',
-    # 'http://127.0.0.1:3000',
-    # 'localhost',
-    # '127.0.0.1',
-    # 'http://localhost',
-    # 'http://127.0.0.1'
-    '*'
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'localhost',
+    '127.0.0.1',
+    'http://localhost',
+    'http://127.0.0.1'
 ]
 
 # add allowed hosts

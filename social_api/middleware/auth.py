@@ -6,13 +6,13 @@ from starlette.authentication import (
     BaseUser
 )
 import jwt
-from ..models.base import config
+from social_api import config
 from ..models.user.model import UserTable
 import logging
 from starlette.requests import Request
 import typing
 from starlette.datastructures import Headers
-from ..models.base import database
+from social_api.db.base import database
 from sqlalchemy import select, and_
 
 
