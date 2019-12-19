@@ -35,6 +35,7 @@ class SignupError(ObjectType):
     email_or_phone = GList(String, required=False)
     password = GList(String, required=False)
     username = GList(String, required=False)
+    date_of_birth = GList(String, required=False)
     general = GList(String, required=False)
 
 
@@ -45,10 +46,10 @@ class Signup(ObjectMutation):
     class Arguments:
         first_name = String(required=False)
         last_name = String(required=False)
+        gender = String(required=False)
         email_or_phone = String(required=True)
         username = String(required=True)
-        gender = String(required=False)
-        date_of_birth = Date(required=False)
+        date_of_birth = Date(required=True)
         password1 = String(required=True)
         password2 = String(required=True)
 
@@ -70,7 +71,7 @@ class Signup(ObjectMutation):
         password1: str = kwargs.get('password1', '').strip()
         password2: str = kwargs.get('password2', '').strip()
 
-        if all([bool(value) for value in (first_name, last_name, username, gender, email_or_phone, date_of_birth, password1, password2)]):
+        if all([bool(value) for value in (username, email_or_phone, date_of_birth, password1, password2)]):
             # check email valid:
             if validate_email(email=email_or_phone):
                 # => user is using email for registration
@@ -131,6 +132,12 @@ class Signup(ObjectMutation):
             # check gender:
             if not gender in [MALE, FEMALE, OTHER]:
                 gender = OTHER
+
+            # check date_of_birth is instance of datetime or not:
+            # print(date_of_birth)
+            # if not isinstance(date_of_birth, datetime):
+            #     errors['date_of_birth'].append(
+            #         'Please enter correct date of birth.')
         else:
             errors['general'].append(
                 'Please enter all the required fields correctly.')

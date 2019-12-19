@@ -28,10 +28,11 @@ class User(Base):
     hashed_password = Column(String(200), nullable=False)
     # UserPicture please refer to file.mode.UserPicture
     picture = image_attachment('UserPicture')
-    created_at = Column(DateTime(), default=datetime.utcnow)
+    created_at = Column(DateTime(), default=datetime.now)
     updated_at = Column(DateTime(), default=datetime.utcnow,
                         onupdate=datetime.utcnow)
     active = Column(Boolean, default=False)
+    number_of_followers = Column(Integer, default=lambda: 0)
 
 
 class UserType(ObjectType):
@@ -50,6 +51,7 @@ class UserType(ObjectType):
     active = GBoolean(required=False)
     created_at = GDateTime(required=False)
     updated_at = GDateTime(required=False)
+    number_of_followers = Int(required=False)
 
 
 UserTable: Table = User.__table__
