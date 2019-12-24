@@ -6,26 +6,9 @@ from graphene import (
     ObjectType,
     NonNull
 )
-from graphene.types import Scalar
 import typing
 from starlette.authentication import BaseUser
-
-
-class Upload(Scalar):
-    """Create scalar that ignores normal serialization/deserialization, since
-    that will be handled by the multipart request spec"""
-
-    @staticmethod
-    def serialize(value):
-        return value
-
-    @staticmethod
-    def parse_literal(node):
-        return node
-
-    @staticmethod
-    def parse_value(value):
-        return value
+from social_api.graphql.types import Upload
 
 
 class UploadFiles(ObjectMutation):
@@ -45,7 +28,6 @@ class UploadFiles(ObjectMutation):
         errors: typing.Union[typing.List[str], list] = []
 
         user: BaseUser = info.context['request'].user
-
         # check user is authenticated or not:
         # if user.is_authenticated:
         files: typing.List[typing.Any] = kwargs.get('files', [])

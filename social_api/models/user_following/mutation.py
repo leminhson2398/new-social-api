@@ -24,40 +24,40 @@ import logging
 async def update_user_following(toUserId: int = None, fromUserId: int = None, existingRecord: typing.Any = None) -> None:
     """
     existingRecord decides whether to remove or add following relationship.
+    also, takes care of 'number_of_followers' of an user.
     """
     if toUserId is None or fromUserId is None:
         raise ValueError(
             "Both 'toUserId' and 'fromUserId' have to be integers.")
 
     toggleFollowQuery: typing.Any = None
-    updateUserQuery: typing.Any = None
+    # query for updating user table:
+    updateUserQuery: typing.Any = update(UserTable).where(
+        UserTable.c.id == toUserId
+    ).values(
+        number_of_followers=(
+            # python comprehension
+            UserTable.c.number_of_followers +
+            1 if existingRecord is None else UserTable.c.number_of_followers - 1
+        )
+    )
 
     if existingRecord is not None:
-        # have to remove this record
+        # record does exist, have to remove this record
         toggleFollowQuery = delete(UserFollowingTable).where(
             UserFollowingTable.c.id == existingRecord['id']
         )
-        updateUserQuery = update(UserTable).where(
-            UserTable.c.id == toUserId
-        ).values(
-            number_of_followers=UserTable.c.number_of_followers - 1
-        )
     else:
-        # have to add one following record
+        # have to add one record
         toggleFollowQuery = UserFollowingTable.insert().values(
             from_user_id=fromUserId, to_user_id=toUserId
         )
-        updateUserQuery = update(UserTable).where(
-            UserTable.c.id == toUserId
-        ).values(number_of_followers=UserTable.c.number_of_followers + 1)
 
     # create db transaction
     transaction: Transaction = await database.transaction()
     try:
         toggleFollowResult: typing.Any = await database.execute(query=toggleFollowQuery)
         updateUserResult: typing.Any = await database.execute(query=updateUserQuery)
-
-        print('toggle:', toggleFollowResult, 'update:', updateUserResult)
 
     except IntegrityError as e:
         logging.error(f"Error update user following relation: {e}.")
@@ -105,7 +105,7 @@ class ToggleFollowUser(ObjectMutation):
         else:
             errors.append('You have to log in to follow people.')
 
-        if ok:
+        if ok and len(errors) == 0:
             # add background task
             background: BackgroundTasks = info.context['background']
             background.add_task(

@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, String, Integer, DateTime, Boolean, Table
+    Column, String, Integer, TIMESTAMP, Boolean, Table, func, text
 )
 from graphene import (
     ObjectType,
@@ -9,30 +9,32 @@ from graphene import (
     Date,
     DateTime as GDateTime
 )
-from datetime import datetime
 from sqlalchemy_imageattach.entity import image_attachment
 from social_api.db.base import Base
+from sqlalchemy.orm import relationship
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__: str = 'users'
 
     id = Column(Integer, primary_key=True, index=True)
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
     username = Column(String(100), nullable=False, unique=True)
     gender = Column(String(10), nullable=True)
-    date_of_birth = Column(DateTime(), nullable=True)
+    date_of_birth = Column(TIMESTAMP(timezone=True), nullable=True)
     email = Column(String(256), nullable=True, unique=True, index=True)
     phone_number = Column(String(15), nullable=True, unique=True)
     hashed_password = Column(String(200), nullable=False)
     # UserPicture please refer to file.mode.UserPicture
     picture = image_attachment('UserPicture')
-    created_at = Column(DateTime(), default=datetime.now)
-    updated_at = Column(DateTime(), default=datetime.utcnow,
-                        onupdate=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), nullable=False,
+                        server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False,
+                        onupdate=func.now())
     active = Column(Boolean, default=False)
-    number_of_followers = Column(Integer, default=lambda: 0)
+    number_of_followers = Column(Integer, default=text('0'))
+    shop = relationship('Shop', uselist=False, back_populates='owner')
 
 
 class UserType(ObjectType):

@@ -24,7 +24,7 @@ class CustomAuthenticatedUser(SimpleUser):
 
 class AuthBackend(AuthenticationBackend):
     async def authenticate(self, conn: Request) -> typing.Tuple[AuthCredentials, BaseUser]:
-        auth: str = conn.headers.get('Authentication', default='')
+        auth: str = conn.headers.get('Authorization', default='')
         if bool(auth):
             # auth in form of: 'JWT kjdfkldjfoirtjig'.
             scheme, credentials = auth.split(sep=' ', maxsplit=1)

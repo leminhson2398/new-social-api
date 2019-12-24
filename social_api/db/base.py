@@ -1,6 +1,6 @@
 from databases import Database
 from social_api import config
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy import create_engine
 
 
@@ -13,6 +13,6 @@ database: Database = Database(DB_URL)
 engine = create_engine(DB_URL)
 
 # init Base:
-Base = declarative_base()
+Base: DeclarativeMeta = declarative_base()
 
 STD_NUMBER_OF_RESULT_AT_A_TIME: int = 10

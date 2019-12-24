@@ -1,12 +1,12 @@
 from sqlalchemy import (
     Column,
     Integer,
-    DateTime,
+    TIMESTAMP,
     ForeignKey,
     Table
 )
 from social_api.db.base import Base
-from datetime import datetime
+from sqlalchemy import func
 from graphene import (
     ObjectType,
     Int,
@@ -16,10 +16,10 @@ from graphene import (
 
 class UserFollowing(Base):
     __tablename__: str = 'user_following'
-    id = Column(Integer(), primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     from_user_id = Column(ForeignKey('users.id'))
     to_user_id = Column(ForeignKey('users.id'))
-    created_at = Column(DateTime(), default=datetime.utcnow)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
 
 UserFollowingTable: Table = UserFollowing.__table__

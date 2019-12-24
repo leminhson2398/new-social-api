@@ -21,7 +21,8 @@ from .utils import (
 from sqlalchemy.engine.result import ResultProxy
 from .security import check_password, encrypt_password
 import jwt
-from datetime import datetime, timedelta
+from sqlalchemy import func
+from datetime import timedelta, datetime
 from social_api import config
 import logging
 from phonenumbers import parse, is_valid_number
@@ -198,7 +199,7 @@ class Signin(ObjectMutation):
             )
             if userWithEmail is None:
                 errors.append(
-                    'We found no account with this email registered.')
+                    f'We found no account with email {email!r} registered.')
             else:
                 # check password if user exist:
                 dbPassword: str = userWithEmail['hashed_password']
@@ -210,7 +211,8 @@ class Signin(ObjectMutation):
                             {
                                 'username': userWithEmail['username'],
                                 'id': userWithEmail['id'],
-                                'expire': (datetime.utcnow() + timedelta(minutes=10)).timestamp()
+                                'expire': str(
+                                    (datetime.utcnow() + timedelta(minutes=10)).timestamp())
                             },
                             config.get(
                                 'SECRET', cast=str, default='@JHSD*(U$JRNDUU#$NKEFE*R()#%NJHFSR*_(#IOFDKEFJ)(#%*$()))'),
@@ -237,5 +239,5 @@ class Signin(ObjectMutation):
 
 
 class Mutation(ObjectType):
-    singin = Signin.Field()
+    signin = Signin.Field()
     signup = Signup.Field()

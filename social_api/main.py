@@ -5,7 +5,7 @@ from graphql.execution.executors.asyncio import AsyncioExecutor
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.routing import Route
-from .graphql import CustomGraphqlApp
+from social_api.graphql.graphql import CustomGraphqlApp
 import typing
 from graphene import Schema
 from .models.schema import Query, Mutation

@@ -1,5 +1,5 @@
 from graphene import ObjectType, NonNull, List
-from .model import CategoryType, CategoryTable, SubCategoryTable
+from .model import CategoryGroupType, CategoryGroupTable, CategoryTable, CategoryType
 from graphql.execution.base import ResolveInfo
 from social_api.db.base import database
 import typing
@@ -18,16 +18,15 @@ class Query(ObjectType):
         """
         returns all categories and their subs
         """
-        # query: Select = select([
-        #     CategoryTable,
-        #     SubCategoryTable
-        # ]).select_from(
-        #     CategoryTable.join(right=SubCategoryTable)
-        # )
-        query: Select = CategoryTable.select()
-        # fetchResult: typing.Union[None, typing.List[typing.Mapping]] = await database.fetch_all(query=query)
-        async for data in database.iterate(query=query):
-            print(dict(data))
+        query: Select = select([
+            CategoryTable
+        ])
+
+        print(query)
+
+        result = await database.fetch_all(query=query)
+        for row in result:
+            print(dict(row))
 
         # for d in fetchResult:
         #     print(dict(d))
