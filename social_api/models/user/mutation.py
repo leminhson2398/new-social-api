@@ -45,9 +45,7 @@ class Signup(ObjectMutation):
     errors = Field(SignupError, required=False)
 
     class Arguments:
-        first_name = String(required=False)
-        last_name = String(required=False)
-        gender = String(required=False)
+        gender = String(required=True)
         email_or_phone = String(required=True)
         username = String(required=True)
         date_of_birth = Date(required=True)
@@ -62,8 +60,6 @@ class Signup(ObjectMutation):
         emailOrPhone: typing.Union[str, None] = None
         encryptedPassword: typing.Union[str, None] = None
 
-        first_name: str = kwargs.get('first_name', '').strip()
-        last_name: str = kwargs.get('last_name', '').strip()
         username: str = kwargs.get('username', '').strip()
         gender: str = kwargs.get('gender', '').strip().lower()
         email_or_phone: str = kwargs.get('email_or_phone', '').strip()
@@ -147,8 +143,6 @@ class Signup(ObjectMutation):
             # ordereddict can also be measured
             ok = True
             newUserData: typing.Mapping[str, typing.Any] = {
-                'first_name': first_name,
-                'last_name': last_name,
                 'date_of_birth': date_of_birth,
                 'username': username,
                 'hashed_password': encryptedPassword,

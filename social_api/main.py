@@ -1,75 +1,47 @@
-from starlette.applications import Starlette
-from starlette.middleware import Middleware
-from starlette.middleware.cors import CORSMiddleware
-from graphql.execution.executors.asyncio import AsyncioExecutor
-from starlette.middleware.authentication import AuthenticationMiddleware
-from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.routing import Route
-from social_api.graphql.graphql import CustomGraphqlApp
-import typing
-from graphene import Schema
-from .models.schema import Query, Mutation
 from social_api.db.base import database
-from .middleware.auth import AuthBackend
+from fastapi import FastAPI
+from social_api.graphql.graphql import CustomGraphqlApp
+from graphene import Schema
+from social_api.models.schema import Query, Mutation
+from graphql.execution.executors.asyncio import AsyncioExecutor
+from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.authentication import AuthenticationMiddleware
+from social_api.middleware.auth import AuthBackend
+from .import settings
 
 
-# add allowed origins
-allowed_origins: typing.List[str] = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'localhost',
-    '127.0.0.1',
-    'http://localhost',
-    'http://127.0.0.1'
-]
+app = FastAPI()
 
-# add allowed hosts
-allowed_methods: typing.List[str] = [
-    'POST',
-    'GET',
-    'OPTIONS'
-]
 
-# main route for app
-routes: typing.List[Route] = [
-    Route(
-        '/',
-        CustomGraphqlApp(
-            schema=Schema(query=Query, mutation=Mutation),
-            executor_class=AsyncioExecutor
-        )
+app.add_route(
+    path='/',
+    route=CustomGraphqlApp(
+        schema=Schema(query=Query, mutation=Mutation),
+        executor_class=AsyncioExecutor
     )
-]
+)
 
-# specify middlewares
-middlewares: typing.List[Middleware] = [
-    Middleware(
-        CORSMiddleware,
-        allow_origins=allowed_origins,
-        # allow_credentials=True,
-        allow_methods=allowed_methods
-    ),
-    Middleware(
-        AuthenticationMiddleware,
-        backend=AuthBackend()
-    ),
-    Middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=allowed_origins
-    )
-]
+# add middlewares:
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.origins,
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
 
-# init starlette app:
-app: Starlette = Starlette(routes=routes, middleware=middlewares)
+# add authentication middleware
+app.add_middleware(
+    AuthenticationMiddleware,
+    backend=AuthBackend()
+)
 
 
 @app.on_event('startup')
 async def startup() -> None:
-    print('connecting the database')
     await database.connect()
 
 
 @app.on_event('shutdown')
 async def shutdown() -> None:
-    print('disconnecting the database')
     await database.disconnect()
