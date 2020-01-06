@@ -7,28 +7,30 @@ from graphene import (
     List as GList,
     Field
 )
+from graphql.execution import ResolveInfo
 from starlette.background import BackgroundTasks
 import typing
 from .utils import (
-    validate_email,
     validate_password,
     OTHER, MALE, FEMALE,
     send_signup_activation_code,
     USE_EMAIL,
     USE_PHONE_NUMBER,
-    insert_new_user
+    insert_new_user,
+    send_reset_code
 )
+from validate_email import validate_email
 from sqlalchemy.engine.result import ResultProxy
+from sqlalchemy import select, or_
 from .security import check_password, encrypt_password
 import jwt
-from sqlalchemy import func
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 from social_api import config
 import logging
 from phonenumbers import parse, is_valid_number
 from phonenumbers.phonenumber import PhoneNumber
 from collections import defaultdict
-from social_api.db.common import fetch_one_record_filter_by_one_field
+from social_api.db.common import fetch_one_record_filter_by_one_field, fetch_one_record_with_query
 from .model import UserTable
 
 
@@ -52,7 +54,7 @@ class Signup(ObjectMutation):
         password1 = String(required=True)
         password2 = String(required=True)
 
-    async def mutate(self, info, **kwargs):
+    async def mutate(self, info: ResolveInfo, **kwargs):
         ok: bool = False
         errors: defaultdict = defaultdict(list)
 
@@ -86,29 +88,29 @@ class Signup(ObjectMutation):
                         emailOrPhone = USE_PHONE_NUMBER
 
             if emailOrPhone in [USE_EMAIL, USE_PHONE_NUMBER]:
-                existingUserWithEmailOrPhone: typing.Union[typing.Mapping, None] = None
-                if emailOrPhone == USE_EMAIL:
-                    # if user use email for registration, fetch user with this email from the database:
-                    existingUserWithEmailOrPhone = await fetch_one_record_filter_by_one_field(
-                        table=UserTable, filterField='email', filterValue=email_or_phone)
-                elif emailOrPhone == USE_PHONE_NUMBER:
-                    # if user use phone number for registration
-                    existingUserWithEmailOrPhone = await fetch_one_record_filter_by_one_field(
-                        table=UserTable, filterField='phone_number', filterValue=email_or_phone)
+                query: typing.Any = select([UserTable]).where(
+                    or_(
+                        UserTable.c.email == email_or_phone,
+                        UserTable.c.phone_number == email_or_phone
+                    )
+                )
+                # fetch user
+                existingUserWithEmailOrPhone: typing.Union[typing.Mapping, None] = await fetch_one_record_with_query(
+                    query=query
+                )
 
                 # the user with email || phone number does exist
                 if not existingUserWithEmailOrPhone is None:
                     errors['email_or_phone'].append(f"Email {email_or_phone!r} is already taken."
                                                     if emailOrPhone == USE_EMAIL else f"Phone number {email_or_phone!r} is already taken.")
-                else:
-                    # email or phone is not taken:
-                    # now we must check 'username'
-                    existingUserWithUsername: typing.Union[typing.Mapping, None] = await fetch_one_record_filter_by_one_field(
-                        table=UserTable, filterField='username', filterValue=username)
-                    if not existingUserWithUsername is None:
-                        # user with this 'username' is already exist.
-                        errors['username'].append(
-                            f"Username {username!r} is already taken.")
+                # now we must check 'username'
+                existingUserWithUsername: typing.Union[typing.Mapping, None] = await fetch_one_record_filter_by_one_field(
+                    table=UserTable, filterField='username', filterValue=username
+                )
+                if not existingUserWithUsername is None:
+                    # user with this 'username' is already exist.
+                    errors['username'].append(
+                        f"Username {username!r} is already taken.")
             else:
                 errors['email_or_phone'].append(
                     'Please enter a valid email or phone number.')
@@ -131,10 +133,9 @@ class Signup(ObjectMutation):
                 gender = OTHER
 
             # check date_of_birth is instance of datetime or not:
-            # print(date_of_birth)
-            # if not isinstance(date_of_birth, datetime):
-            #     errors['date_of_birth'].append(
-            #         'Please enter correct date of birth.')
+            if not isinstance(date_of_birth, date):
+                errors['date_of_birth'].append(
+                    'Please enter correct date of birth.')
         else:
             errors['general'].append(
                 'Please enter all the required fields correctly.')
@@ -178,7 +179,7 @@ class Signin(ObjectMutation):
         email = String(required=True)
         password = String(required=True)
 
-    async def mutate(self, info, **kwargs):
+    async def mutate(self, info: ResolveInfo, **kwargs):
         ok: bool = False
         errors: typing.List[typing.Union[None, str]] = []
         token: str = ''
@@ -202,14 +203,16 @@ class Signin(ObjectMutation):
                     # then create token:
                     try:
                         token = jwt.encode(
-                            {
+                            payload={
                                 'username': userWithEmail['username'],
                                 'id': userWithEmail['id'],
-                                'expire': str(
-                                    (datetime.utcnow() + timedelta(minutes=10)).timestamp())
+                                'expire': (datetime.utcnow() + timedelta(minutes=10)).timestamp()
                             },
-                            config.get(
-                                'SECRET', cast=str, default='@JHSD*(U$JRNDUU#$NKEFE*R()#%NJHFSR*_(#IOFDKEFJ)(#%*$()))'),
+                            key=config.get(
+                                'SECRET',
+                                cast=str,
+                                default='@JHSD*(U$JRNDUU#$NKEFE*R()#%NJHFSR*_(#IOFDKEFJ)(#%*$()))'
+                            ),
                             algorithm='HS256'
                         ).decode('utf-8')
                     except jwt.PyJWTError as e:
@@ -232,6 +235,73 @@ class Signin(ObjectMutation):
         )
 
 
+class ResetPassword(ObjectMutation):
+    ok = Boolean(required=True)
+    errors = GList(String, required=True)
+
+    class Arguments:
+        email_or_phone_number = String(required=True)
+
+    async def mutate(self, info: ResolveInfo, **kwargs):
+        ok: bool = False
+        errors: typing.List[str] = []
+        # indicate user use email or phone number to reset password.
+        useEmailOrPhoneNumber: str = ''
+
+        email_or_phone_number: str = kwargs.get(
+            'email_or_phone_number', '').strip()
+
+        if not bool(email_or_phone_number):
+            errors.append('Please enter your email.')
+        else:
+            if not isinstance(email_or_phone_number, str):
+                errors.append('Please enter a valid email.')
+            else:
+                # check if value if 'email' or 'phone_number':
+                if validate_email(email=email_or_phone_number):
+                    useEmailOrPhoneNumber = USE_EMAIL
+                else:
+                    try:
+                        phoneNumber: PhoneNumber = parse(
+                            number=email_or_phone_number)
+                    except Exception as e:
+                        errors.append(
+                            f"The input {email_or_phone_number!r} is not valid email or phone number.")
+                    else:
+                        if is_valid_number(numobj=phoneNumber):
+                            useEmailOrPhoneNumber = USE_PHONE_NUMBER
+                # check user exist or not:
+                # query 1 recors from db:
+                queryResult: typing.Union[None, typing.Mapping] = await fetch_one_record_filter_by_one_field(
+                    table=UserTable,
+                    filterField=(
+                        'email' if useEmailOrPhoneNumber is USE_EMAIL else 'phone_number'),
+                    filterValue=email_or_phone_number
+                )
+                if queryResult is None:
+                    # does not exist:
+                    errors.append(
+                        f"We found no account with the {useEmailOrPhoneNumber} {email_or_phone_number!r} registered.")
+                else:
+                    # the account with this 'email' or 'phone_number' does exist:
+                    ok = True
+
+        if ok:
+            # create background task for sending reset code
+            background: BackgroundTasks = info.context['background']
+            background.add_task(
+                send_reset_code,
+                'email' if useEmailOrPhoneNumber is USE_EMAIL else 'phone_number',
+                email_or_phone_number
+            )
+
+        return ResetPassword(
+            ok=ok,
+            errors=errors
+        )
+
+
 class Mutation(ObjectType):
     signin = Signin.Field()
     signup = Signup.Field()
+    reset_password = ResetPassword.Field()

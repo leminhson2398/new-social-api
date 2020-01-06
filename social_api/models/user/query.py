@@ -30,7 +30,7 @@ class Query(ObjectType):
 
         if not result is None:
             userData = dict(result)
-            # remove password before sending to next process
+            # remove password before sending to next operation
             userData.pop('hashed_password')
 
         return userData

@@ -11,8 +11,7 @@ from ..models.user.model import UserTable
 import logging
 from starlette.requests import Request
 import typing
-from starlette.datastructures import Headers
-from social_api.db.base import database
+from social_api.db.common import fetch_one_record_filter_by_one_field
 from sqlalchemy import select, and_
 
 
@@ -32,7 +31,9 @@ class AuthBackend(AuthenticationBackend):
                 return
             try:
                 decoded: typing.Mapping[str, typing.Any] = jwt.decode(
-                    credentials, config.get('SECRET', default=''),
+                    jwt=credentials,
+                    key=config.get('SECRET', default=''),
+                    verify=True,
                     algorithms=['HS256']
                 )
             except jwt.PyJWTError as e:
@@ -42,24 +43,23 @@ class AuthBackend(AuthenticationBackend):
             """
             {'username': value, 'id': value, 'expire': value}
             """
-            username, id, expire = [decoded.get(key, None) for key in [
-                'username', 'id', 'expire']]
+            username, userId, expire = [
+                decoded.get(key, None) for key in ['username', 'id', 'expire']
+            ]
             if not all(bool(i) for i in [id, username, expire]):
                 raise AuthenticationError('Invalid token')
             else:
-                query: typing.Any = select([UserTable]).where(
-                    and_(
-                        UserTable.c.username == username,
-                        UserTable.c.id == id,
-                    )
+                userById: typing.Union[typing.Mapping, None] = await fetch_one_record_filter_by_one_field(
+                    table=UserTable,
+                    filterField='id',
+                    filterValue=userId
                 )
-                user: typing.Mapping = await database.fetch_one(query=query)
-                if user:
+                if not userById is None:
                     # user does exist:
                     return (
                         AuthCredentials(['authenticated']),
                         CustomAuthenticatedUser(
-                            id=id,
+                            id=userId,
                             username=username
                         ),
                     )

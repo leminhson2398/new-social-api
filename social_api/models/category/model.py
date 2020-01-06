@@ -59,8 +59,8 @@ class Category(Base):
                         server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), nullable=False,
                         server_default=func.now(), server_onupdate=func.now())
-    shop = relationship(
-        'Shop', secondary=shopCategoryRelation, back_populates='categories')
+    shop = relationship('Shop', secondary=shopCategoryRelation,
+                        back_populates='categories')
 
 
 # convert to sqlalchemy core type

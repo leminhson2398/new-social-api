@@ -1,6 +1,7 @@
 import typing
 from pydantic import BaseModel
 from sqlalchemy import func
+from datetime import datetime
 
 
 class UserBase(BaseModel):

@@ -1,9 +1,6 @@
 from social_api.db.base import database
 from .model import UserTable
-from sqlalchemy import select, or_
-from sqlalchemy.sql.selectable import Select
 import typing
-from validate_email import validate_email
 import re
 
 
@@ -25,15 +22,15 @@ def validate_password(password: str) -> typing.List[str]:
         password = password.strip()
         # password fullcase:
         PASSWORD_FULLCASE = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$"
-        # one uppercase:
+        # at least one uppercase:
         ONE_UPPERCASE = r"[A-Z]+"
-        # one lowercase:
+        # at least one lowercase:
         ONE_LOWERCASE = r"[a-z]+"
-        # one digit:
+        # at least one digit:
         ONE_DIGIT = r"[0-9]+"
-        # one special character:
+        # at least one special character:
         ONE_SPECIAL_CHARACTER = r"[!$%&'()*+,-.:;<=>?@[\]^_`{|}~]"
-        # eight characters:
+        # at least eight characters:
         EIGHT_CHARACTERS = r"(.){8,}"
 
         matchDict = {
@@ -75,3 +72,12 @@ def send_signup_activation_code(type: str, value: str) -> None:
     time.sleep(5)
 
     print('Sending code')
+
+
+def send_reset_code(type: str, value: str) -> None:
+    """
+    Send reset code to user's phone or email box.\n
+    :type: 'email' or 'phone_number'\n
+    :value: string value of email or phone number.
+    """
+    raise NotImplementedError('Not implemented.')
