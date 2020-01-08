@@ -4,14 +4,24 @@ from graphene import (
     List,
     String,
     ObjectType,
-    NonNull
+    NonNull,
+    InputObjectType
 )
 import typing
 from starlette.authentication import BaseUser
 from social_api.graphql.types import Upload
 from starlette.datastructures import UploadFile
 from . import const
-from .utils import check_files_mimetype, CheckResult
+from .utils import FileEngine, CheckResult
+
+
+class FileOption(InputObjectType):
+    filter = String(required=False)
+
+
+class UploadFileObject(InputObjectType):
+    file = Upload(required=True)
+    options = FileOption(required=True)
 
 
 class UploadFiles(ObjectMutation):
@@ -23,7 +33,7 @@ class UploadFiles(ObjectMutation):
 
     class Arguments:
         files = NonNull(
-            List(Upload, required=True)
+            List(UploadFileObject, required=True)
         )
         media_type = String(required=True)
 
@@ -40,13 +50,13 @@ class UploadFiles(ObjectMutation):
 
         # check files length:
         if len(files):
-            checkMimetypeResult: CheckResult = await check_files_mimetype(
-                files=files,
-                mimetypes=getattr(const, 'ACCEPT_DOCUMENT_MIMETYPE' if media_type ==
-                                  const.DOCUMENT_TYPE else 'ACCEPT_PHOTO_MIMETYPE')
+            fileHandler: FileEngine = FileEngine(files=files)
+            check: CheckResult = await fileHandler.check_files_mimetype(
+                mimetypes=getattr(const, 'ACCEPT_DOCUMENT_MIMETYPE') if
+                media_type == const.DOCUMENT_TYPE else 'ACCEPT_PHOTO_MIMETYPE'
             )
-            if len(checkMimetypeResult.validFiles):
-                pass
+            if len(check.validFiles):
+                print(check.validFiles)
         else:
             errors.append('Please choose files to upload.')
         # else:
