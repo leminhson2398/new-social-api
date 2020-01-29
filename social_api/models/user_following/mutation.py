@@ -4,7 +4,8 @@ from graphene import (
     Int,
     Boolean,
     List,
-    String
+    String,
+    NonNull
 )
 from graphql.execution import ResolveInfo
 from starlette.authentication import BaseUser
@@ -68,7 +69,9 @@ async def update_user_following(toUserId: int = None, fromUserId: int = None, ex
 
 class ToggleFollowUser(ObjectMutation):
     ok = Boolean(required=True)
-    errors = List(String, required=False)
+    errors = NonNull(
+        List(String, required=False)
+    )
 
     class Arguments:
         toUserId = Int(required=True)

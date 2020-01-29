@@ -4,7 +4,7 @@ import sys
 from os import path
 
 
-CURDIR: str = path.dirname(
+ROOTDIR: str = path.dirname(
     path.abspath(__file__)
 )
 
@@ -20,5 +20,5 @@ logging.basicConfig(
 
 # main config:
 config: Config = Config(
-    path.join(CURDIR, ".env")
+    path.join(ROOTDIR, ".env")
 )

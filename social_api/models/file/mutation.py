@@ -12,7 +12,7 @@ from starlette.authentication import BaseUser
 from social_api.graphql.types import Upload
 from starlette.datastructures import UploadFile
 from . import const
-from .utils import FileEngine, CheckResult
+from .utils import UploadedFileProcessor, CheckResult
 
 
 class FileOption(InputObjectType):
@@ -26,9 +26,8 @@ class UploadFileObject(InputObjectType):
 
 class UploadFiles(ObjectMutation):
     ok = Boolean(required=True)
-    errors = List(
-        String,
-        required=False
+    errors = NonNull(
+        List(String, required=False)
     )
 
     class Arguments:
@@ -43,28 +42,42 @@ class UploadFiles(ObjectMutation):
 
         user: BaseUser = info.context['request'].user
         # check if user is authenticated or not:
-        # if user.is_authenticated:
-        files: typing.Union[typing.List[UploadFile],
-                            list] = kwargs.get('files', [])
-        media_type: str = kwargs.get('media_type', '').lower()
+        if user.is_authenticated:
+            files: typing.Union[typing.List[UploadFile],
+                                list] = kwargs.get('files', [])
+            media_type: str = kwargs.get('media_type', '').lower()
 
-        # check files length:
-        if len(files):
-            fileHandler: FileEngine = FileEngine(files=files)
-            check: CheckResult = await fileHandler.check_files_mimetype(
-                mimetypes=getattr(const, 'ACCEPT_DOCUMENT_MIMETYPE') if
-                media_type == const.DOCUMENT_TYPE else 'ACCEPT_PHOTO_MIMETYPE'
-            )
-            if len(check.validFiles):
-                print(check.validFiles)
+            # check files length:
+            if len(files):
+                fileProcessor: UploadedFileProcessor = UploadedFileProcessor(
+                    files=files, mediaType=media_type)
+                # check file mime types:
+                check: UploadedFileProcessor = await fileProcessor.check_files_mimetype()
+                check = await check.check_file_storage_size()
+                print(check.checkResult.validFiles)
+
+                for error in check.checkResult.errors:
+                    errors.append(error)
+            else:
+                errors.append('Please choose files to upload.')
         else:
-            errors.append('Please choose files to upload.')
-        # else:
-        #     errors.append('You have to login to upload files.')
+            errors.append('You have to login to upload files.')
 
         return UploadFiles(
             ok=ok,
             errors=errors
+        )
+
+
+class DeleteFiles(ObjectMutation):
+    ok = Boolean(required=True)
+    errors = NonNull(
+        List(String, required=True)
+    )
+
+    class Argumetns:
+        file_ids = NonNull(
+            List()
         )
 
 
